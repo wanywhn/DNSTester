@@ -1,0 +1,5 @@
+<RCC>
+    <qresource prefix="/image">
+        <file>resource/image/DNS_exp.jpg</file>
+    </qresource>
+</RCC>
