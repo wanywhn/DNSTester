@@ -2,4 +2,7 @@
     <qresource prefix="/image">
         <file>resource/image/DNS_exp.jpg</file>
     </qresource>
+    <qresource prefix="/icon">
+        <file>resource/icon/icons8-DNS-50.png</file>
+    </qresource>
 </RCC>

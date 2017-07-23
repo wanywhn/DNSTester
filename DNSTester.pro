@@ -13,13 +13,13 @@ TARGET = DNSTester
 TEMPLATE = app
 
 
-SOURCES += main.cpp\
-        mainwindow.cpp
+SOURCES += src/main.cpp\
+        src/mainwindow.cpp
 
-HEADERS  += mainwindow.h
+HEADERS  += src/mainwindow.h
 
 FORMS    += \
-    mainwindow.ui
+    src/mainwindow.ui
 
 RESOURCES += \
-    resource.qrc
+    src/resource.qrc

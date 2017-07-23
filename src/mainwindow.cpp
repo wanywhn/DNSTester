@@ -14,6 +14,8 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
   this->setWindowTitle(tr("DNS优化器"));
+  setWindowIcon(QIcon(":/icon/resource/icon/icons8-DNS-50.png"));
+
   ui->next_Intro_Btn->setText(tr("下一步"));
   ui->pre_Test_Btn->setText(tr("前一页"));
   ui->set_Result_Btn->setText(tr("进行设置"));
@@ -41,7 +43,9 @@ MainWindow::MainWindow(QWidget *parent)
                            "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"
                            " 如果您遇到网页打开慢，网页打不开，页面被劫持，经常弹广告，"
                            "很有可能是DNS服务器较差，不稳定，或者服务器被劫持导致。"
-                           "</font>");
+                           "</font>"
+                           "<br/><a href=\"https://icons8.com/icon/41400/DNS\">Dns icon</a> by Icons8"
+                           );
   //统计线程个数
   numProc = 0;
 
@@ -111,6 +115,8 @@ MainWindow::MainWindow(QWidget *parent)
       ui->comboBox_hw->addItem(interface.name() + ":" + entry.ip().toString());
     }
   }
+
+
 }
 
 MainWindow::~MainWindow() {
