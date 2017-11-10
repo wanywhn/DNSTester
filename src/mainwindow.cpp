@@ -7,6 +7,7 @@
 #include <QMessageBox>
 #include <QMutex>
 #include <QNetworkInterface>
+#include <QNetworkRequest>
 #include <QTextStream>
 #include <QThread>
 #include <QTimer>
@@ -27,6 +28,22 @@ void MainWindow::findNetworkInterface() {
   }
 }
 
+void MainWindow::addItemtoTableWidget() {
+  QTableWidgetItem *ipTableItem;
+  QTableWidgetItem *timeTableItem;
+  for (int i = 0; i != DnsCount; ++i) {
+    ipTableItem = new QTableWidgetItem;
+    timeTableItem = new QTableWidgetItem;
+    QString text = (DnsList[i]);
+    ipTableItem->setText(text);
+    timeTableItem->setText(tr("待测试"));
+    ipTableItem->setFlags(ipTableItem->flags() & (~Qt::ItemIsEditable));
+    timeTableItem->setFlags(timeTableItem->flags() & (~Qt::ItemIsEditable));
+    resultWidget->setItem(i, 0, ipTableItem);
+    resultWidget->setItem(i, 1, timeTableItem);
+  }
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
@@ -37,11 +54,12 @@ MainWindow::MainWindow(QWidget *parent)
   ui->pre_Test_Btn->setText(tr("前一页"));
   ui->set_Result_Btn->setText(tr("进行设置"));
   ui->start_Test_Btn->setText(tr("开始测试"));
+  ui->update_DNS_List->setText(tr("更新DNS列表"));
   dnsSelected = "";
   dnsSelectedId = 0;
+  timeouted = 1;
   testStarted = false;
   ui->next_Intro_Btn->setGeometry(ui->set_Result_Btn->geometry());
-
   ui->label_DNS_exp->setPixmap(QPixmap(":/image/resource/image/DNS_exp.jpg"));
   ui->label_DNS_exp->setScaledContents(true);
   ui->label_ip->setText(tr("请选择当前网卡"));
@@ -108,19 +126,7 @@ MainWindow::MainWindow(QWidget *parent)
                                                          QHeaderView::Stretch);
   resultWidget->horizontalHeader()->setSectionResizeMode(
       1, QHeaderView::ResizeToContents);
-  QTableWidgetItem *ipTableItem;
-  QTableWidgetItem *timeTableItem;
-  for (int i = 0; i != DnsCount; ++i) {
-    ipTableItem = new QTableWidgetItem;
-    timeTableItem = new QTableWidgetItem;
-    QString text = (DnsList[i]);
-    ipTableItem->setText(text);
-    timeTableItem->setText(tr("待测试"));
-    ipTableItem->setFlags(ipTableItem->flags() & (~Qt::ItemIsEditable));
-    timeTableItem->setFlags(timeTableItem->flags() & (~Qt::ItemIsEditable));
-    resultWidget->setItem(i, 0, ipTableItem);
-    resultWidget->setItem(i, 1, timeTableItem);
-  }
+  addItemtoTableWidget();
 
   mQProgressbar = ui->progressBar;
   mQProgressbar->setMinimum(0);
@@ -152,6 +158,31 @@ void MainWindow::processFinished(int index) {
   emit pingFinished();
 }
 
+void MainWindow::continueNext(QString program) {
+  if (++timeouted <= DnsCount) {
+    ui->progressBar->setValue((timeouted - 1) * PingTimes);
+    startPing(program, timeouted - 1);
+  } else {
+    ui->progressBar->setValue(DnsCount * PingTimes);
+    auto item = this->resultWidget->item(DnsCount - 1, 1);
+    item->setText(QString::number(DnsNumResult[DnsCount - 1]));
+    dnsSelectedId = 0;
+    double max = DnsNumResult.at(0);
+    for (int i = 0; i != DnsCount; ++i) {
+      if (DnsNumResult.at(i) < max) {
+        dnsSelectedId = i;
+        max = DnsNumResult.at(i);
+      }
+    }
+    dnsSelected = DnsList.at(dnsSelectedId);
+    auto dnsItem = this->resultWidget->item(dnsSelectedId, 0);
+    auto resultItem = this->resultWidget->item(dnsSelectedId, 1);
+    dnsItem->setTextColor(Qt::red);
+    resultItem->setTextColor(Qt::red);
+    testStarted=false;
+  }
+}
+
 void MainWindow::startTest() {
   if (testStarted) {
     return;
@@ -161,30 +192,8 @@ void MainWindow::startTest() {
   QString program = QString("ping -W 1 -c %L1 ").arg(PingTimes);
 
   ui->progressBar->setValue(1);
-  connect(this, &MainWindow::pingFinished, [=]() {
-    static int timeouted = 1;
-    if (++timeouted <= DnsCount) {
-      ui->progressBar->setValue((timeouted - 1) * PingTimes);
-      startPing(program, timeouted - 1);
-    } else {
-      ui->progressBar->setValue(DnsCount * PingTimes);
-      auto item = this->resultWidget->item(DnsCount - 1, 1);
-      item->setText(QString::number(DnsNumResult[DnsCount - 1]));
-      dnsSelectedId = 0;
-      double max = DnsNumResult.at(0);
-      for (int i = 0; i != DnsCount; ++i) {
-        if (DnsNumResult.at(i) < max) {
-          dnsSelectedId = i;
-          max = DnsNumResult.at(i);
-        }
-      }
-      dnsSelected = DnsList.at(dnsSelectedId);
-      auto dnsItem = this->resultWidget->item(dnsSelectedId, 0);
-      auto resultItem = this->resultWidget->item(dnsSelectedId, 1);
-      dnsItem->setTextColor(Qt::red);
-      resultItem->setTextColor(Qt::red);
-    }
-  });
+  conn=connect(this, &MainWindow::pingFinished, [=]() { continueNext(program); });
+  //坑，多连接了几次
   startPing(program, 0);
 }
 
@@ -237,11 +246,8 @@ void MainWindow::setDns() {
 
 //读取数据放至Result中
 void MainWindow::store(int index) {
-  // for (QVector<QProcess *>::const_iterator iter = vProcess.cbegin();
-  //      iter != vProcess.cend(); ++iter) {
   auto iter = vProcess.cbegin();
   iter += index;
-  // ui->progressBar->setValue((iter - vProcess.cbegin()) + 1 + DnsCount * 2);
   QByteArray res = (*iter)->readAllStandardOutput();
   QTextStream in(res);
   QString line;
@@ -267,30 +273,52 @@ void MainWindow::store(int index) {
 
 //计算测试结果
 void MainWindow::cal() {
-  //  DnsNumResult.clear();
-  //  DnsResult.clear();
   double res = 0;
   for (int i = 0; i < PingTimes; ++i) {
     res += DnsResult.at(i).split(" ").at(0).toDouble();
   }
   DnsNumResult.enqueue(res / PingTimes);
   DnsResult.clear();
-  //  for (int i = 0; i < DnsCount; ++i) {
-  //    dynamic_cast<QLabel *>(ui->verticalLayout_sec->itemAt(i)->widget())
-  //        ->setText(QString::number(DnsNumResult.at(i),'f',3) + "毫秒");
-  //  }
-  //  dnsSelectedId = 0;
-  //  double max = 500;
-  //  for (int i = 0; i < DnsCount; ++i) {
-  //    if (DnsNumResult.at(i) < max) {
-  //      dnsSelectedId = i;
-  //      max = DnsNumResult.at(i);
-  //    }
-  //  }
-  //  dynamic_cast<QLabel
-  //  *>(ui->verticalLayout_sec->itemAt(dnsSelectedId)->widget())
-  //      ->setStyleSheet("color:red");
-  //  dnsSelected = DnsList.at(dnsSelectedId);
-  //  qDebug() << dnsSelected;
-  //  testStarted = false;
+}
+
+void MainWindow::on_update_DNS_List_clicked() {
+    if(true==testStarted){
+        return;
+    }
+  netManager = new QNetworkAccessManager(this);
+  connect(netManager, &QNetworkAccessManager::finished, this,
+          &MainWindow::replyFinished);
+  auto reply = netManager->get(
+      QNetworkRequest(QUrl("http://wanywhn.com.cn:8080/DNSList")));
+  connect(reply, &QNetworkReply::readyRead, [this, reply]() {
+    QString line(reply->readAll());
+    auto lines = line.split("\n");
+    lines.removeDuplicates();
+    lines.removeAll("");
+
+    DnsList.clear();
+    DnsNumResult.clear();
+    DnsResult.clear();
+    vProcess.clear();
+    timeouted = 1;
+
+    DnsList.append(lines);
+    DnsCount = DnsList.count();
+    ui->progressBar->setValue(0);
+    ui->progressBar->setMaximum(DnsCount * PingTimes);
+    resultWidget->setRowCount(DnsCount);
+    resultWidget->clearContents();
+    this->addItemtoTableWidget();
+    testStarted = false;
+    disconnect(conn);
+
+    qDebug() << lines;
+    reply->deleteLater();
+
+  });
+}
+
+void MainWindow::replyFinished(QNetworkReply *reply) {
+  qDebug() << "replyFinished";
+  reply->deleteLater();
 }

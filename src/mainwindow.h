@@ -2,6 +2,8 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
 #include <QProcess>
 #include <QProgressBar>
 #include <QQueue>
@@ -12,47 +14,59 @@ namespace Ui {
 class MainWindow;
 }
 
-class MainWindow : public QMainWindow
-{
-    Q_OBJECT
+class MainWindow : public QMainWindow {
+  Q_OBJECT
 
 public:
-    explicit MainWindow(QWidget *parent = 0);
-    ~MainWindow();
+  explicit MainWindow(QWidget *parent = 0);
+  ~MainWindow();
 
-    void nmcliCall();
+  void nmcliCall();
 
-    void findNetworkInterface();
+  void findNetworkInterface();
 
-    void startPing(QString program, int index);
+  void startPing(QString program, int index);
 
-public slots:
-    void processFinished(int index);
+  void addItemtoTableWidget();
+
+  void continueNext(QString program);
+
 signals:
-    void pingFinished();
+  void pingFinished();
 private slots:
-    void startTest();
-    void setDns();
+  void processFinished(int index);
+  //    void readyRead();
+  void startTest();
+  void setDns();
+  void on_update_DNS_List_clicked();
+  void replyFinished(QNetworkReply *reply);
+
 private:
-    void store(int index);
-    void cal();
+  void store(int index);
+  void cal();
+
 private:
-    Ui::MainWindow *ui;
-    int IndexStackedWidget;
-    int PingTimes;
-    int DnsCount;
+  Ui::MainWindow *ui;
+  int IndexStackedWidget;
+  int PingTimes;
+  //注意更新
+  int DnsCount;
 
-    QStringList DnsList;
-    QStringList DnsResult;
-    QQueue<double> DnsNumResult;
+  QStringList DnsList;
+  QStringList DnsResult;
+  QQueue<double> DnsNumResult;
 
-    QString dnsSelected;
-    int dnsSelectedId;
-QTableWidget * resultWidget;
-    QVector<QProcess *> vProcess;
+  int timeouted;
+  QString dnsSelected;
+  int dnsSelectedId;
+  QTableWidget *resultWidget;
+  QVector<QProcess *> vProcess;
 
-    bool testStarted;
-    QProgressBar *mQProgressbar;
+  bool testStarted;
+  QProgressBar *mQProgressbar;
+  QNetworkAccessManager *netManager;
+  QMetaObject::Connection conn;
+
 };
 
 #endif // MAINWINDOW_H
