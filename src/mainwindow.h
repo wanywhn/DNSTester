@@ -4,6 +4,8 @@
 #include <QMainWindow>
 #include <QProcess>
 #include <QProgressBar>
+#include <QQueue>
+#include <QTableWidget>
 #include <QVector>
 
 namespace Ui {
@@ -20,11 +22,19 @@ public:
 
     void nmcliCall();
 
+    void findNetworkInterface();
+
+    void startPing(QString program, int index);
+
+public slots:
+    void processFinished(int index);
+signals:
+    void pingFinished();
 private slots:
     void startTest();
     void setDns();
 private:
-    void store();
+    void store(int index);
     void cal();
 private:
     Ui::MainWindow *ui;
@@ -34,12 +44,11 @@ private:
 
     QStringList DnsList;
     QStringList DnsResult;
-    QVector<double> DnsNumResult;
+    QQueue<double> DnsNumResult;
 
     QString dnsSelected;
     int dnsSelectedId;
-
-    int numProc;
+QTableWidget * resultWidget;
     QVector<QProcess *> vProcess;
 
     bool testStarted;
