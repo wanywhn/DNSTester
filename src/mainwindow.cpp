@@ -57,10 +57,12 @@ MainWindow::MainWindow(QWidget *parent)
   ui->update_DNS_List->setText(tr("更新DNS列表"));
   dnsSelected = "";
   dnsSelectedId = 0;
-  timeouted = 1;
+  init();
   testStarted = false;
   ui->next_Intro_Btn->setGeometry(ui->set_Result_Btn->geometry());
-  ui->label_DNS_exp->setPixmap(QPixmap(":/image/resource/image/DNS_exp.jpg"));
+  ui->label_DNS_exp->resize(900, 400);
+  ui->label_DNS_exp->setPixmap(QPixmap(":/image/resource/image/DNS_exp.jpg")
+                                   .scaled(ui->label_DNS_exp->size()));
   ui->label_DNS_exp->setScaledContents(true);
   ui->label_ip->setText(tr("请选择当前网卡"));
 
@@ -114,7 +116,6 @@ MainWindow::MainWindow(QWidget *parent)
           << "112.124.47.27"; // TODO 获取数据
   DnsCount = DnsList.size();
 
-  // TODO 切换数据-模型
   resultWidget = new QTableWidget(DnsCount, 2, this);
   resultWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
   ui->horizontalLayout_dns_and_sec->addWidget(resultWidget);
@@ -142,10 +143,12 @@ void MainWindow::startPing(QString program, int index) {
   QProcess *mPing = new QProcess(this);
   vProcess.push_back(mPing);
   program += DnsList[index];
-  connect(mPing,
-          static_cast<void (QProcess::*)(int exitCode, QProcess::ExitStatus)>(
-              &QProcess::finished),
-          [this, index]() { this->processFinished(index); });
+  conn = connect(
+      mPing,
+      static_cast<void (QProcess::*)(int exitCode, QProcess::ExitStatus)>(
+          &QProcess::finished),
+      [this, index]() { this->processFinished(index); });
+  mConn.push_back(conn);
   mPing->start(program);
   qDebug() << program;
 }
@@ -156,6 +159,14 @@ void MainWindow::processFinished(int index) {
   auto item = this->resultWidget->item(index, 1);
   item->setText(QString::number(DnsNumResult[index]));
   emit pingFinished();
+}
+
+void MainWindow::setSelectItemColor(QColor color)
+{
+    auto dnsItem = this->resultWidget->item(dnsSelectedId, 0);
+    auto resultItem = this->resultWidget->item(dnsSelectedId, 1);
+    dnsItem->setTextColor(color);
+    resultItem->setTextColor(color);
 }
 
 void MainWindow::continueNext(QString program) {
@@ -175,11 +186,9 @@ void MainWindow::continueNext(QString program) {
       }
     }
     dnsSelected = DnsList.at(dnsSelectedId);
-    auto dnsItem = this->resultWidget->item(dnsSelectedId, 0);
-    auto resultItem = this->resultWidget->item(dnsSelectedId, 1);
-    dnsItem->setTextColor(Qt::red);
-    resultItem->setTextColor(Qt::red);
-    testStarted=false;
+    setSelectItemColor(Qt::red);
+    foreach (conn, mConn) { disconnect(conn); }
+    testStarted = false;
   }
 }
 
@@ -188,11 +197,14 @@ void MainWindow::startTest() {
     return;
   }
   testStarted = true;
-  vProcess.clear();
+  init();
+  setSelectItemColor(Qt::black);
   QString program = QString("ping -W 1 -c %L1 ").arg(PingTimes);
 
   ui->progressBar->setValue(1);
-  conn=connect(this, &MainWindow::pingFinished, [=]() { continueNext(program); });
+  conn = connect(this, &MainWindow::pingFinished,
+                 [=]() { continueNext(program); });
+  mConn.push_back(conn);
   //坑，多连接了几次
   startPing(program, 0);
 }
@@ -217,26 +229,32 @@ void MainWindow::nmcliCall() {
   QProcess *restartNetwork = new QProcess(ui->centralWidget);
 
   cmd = "nmcli con up " + UUID;
-  connect(restartNetwork,
-          static_cast<void (QProcess::*)(int exitCode, QProcess::ExitStatus)>(
-              &QProcess::finished),
-          [this] {
-            QMessageBox::information(ui->centralWidget, tr("成功"),
-                                     tr("修改成功！"));
-          });
+  conn = connect(
+      restartNetwork,
+      static_cast<void (QProcess::*)(int exitCode, QProcess::ExitStatus)>(
+          &QProcess::finished),
+      [this] {
+        QMessageBox::information(ui->centralWidget, tr("成功"),
+                                 tr("修改成功！"));
+      });
+  mConn.push_back(conn);
+
   restartNetwork->start(cmd);
 }
 
 void MainWindow::setDns() {
   QString hw_interfaceName = ui->comboBox_hw->currentText().split(":").at(0);
   QProcess *mprocess = new QProcess(this);
-  connect(
+  conn = connect(
       mprocess, &QProcess::errorOccurred,
       [this](QProcess::ProcessError error) { qDebug() << "ERROR" << error; });
-  connect(mprocess,
-          static_cast<void (QProcess::*)(int exitCode, QProcess::ExitStatus)>(
-              &QProcess::finished),
-          [this] { nmcliCall(); });
+  mConn.push_back(conn);
+  conn = connect(
+      mprocess,
+      static_cast<void (QProcess::*)(int exitCode, QProcess::ExitStatus)>(
+          &QProcess::finished),
+      [this] { nmcliCall(); });
+  mConn.push_back(conn);
   QStringList options;
   options << "-c";
   options << "nmcli con show |grep " + hw_interfaceName;
@@ -281,26 +299,32 @@ void MainWindow::cal() {
   DnsResult.clear();
 }
 
+void MainWindow::init() {
+  DnsNumResult.clear();
+  DnsResult.clear();
+  foreach (auto vp, vProcess) { delete vp; }
+  vProcess.clear();
+  timeouted = 1;
+
+}
+
 void MainWindow::on_update_DNS_List_clicked() {
-    if(true==testStarted){
-        return;
-    }
+  if (true == testStarted) {
+    return;
+  }
   netManager = new QNetworkAccessManager(this);
-  connect(netManager, &QNetworkAccessManager::finished, this,
-          &MainWindow::replyFinished);
+  conn = connect(netManager, &QNetworkAccessManager::finished, this,
+                 &MainWindow::replyFinished);
+  mConn.push_back(conn);
   auto reply = netManager->get(
       QNetworkRequest(QUrl("http://wanywhn.com.cn:8080/DNSList")));
-  connect(reply, &QNetworkReply::readyRead, [this, reply]() {
+  conn = connect(reply, &QNetworkReply::readyRead, [this, reply]() {
     QString line(reply->readAll());
     auto lines = line.split("\n");
     lines.removeDuplicates();
     lines.removeAll("");
-
     DnsList.clear();
-    DnsNumResult.clear();
-    DnsResult.clear();
-    vProcess.clear();
-    timeouted = 1;
+    init();
 
     DnsList.append(lines);
     DnsCount = DnsList.count();
@@ -316,6 +340,7 @@ void MainWindow::on_update_DNS_List_clicked() {
     reply->deleteLater();
 
   });
+  mConn.push_back(conn);
 }
 
 void MainWindow::replyFinished(QNetworkReply *reply) {

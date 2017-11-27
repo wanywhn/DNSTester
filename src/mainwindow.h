@@ -31,6 +31,10 @@ public:
 
   void continueNext(QString program);
 
+  void init();
+
+  void setSelectItemColor(QColor color);
+
 signals:
   void pingFinished();
 private slots:
@@ -61,6 +65,7 @@ private:
   int dnsSelectedId;
   QTableWidget *resultWidget;
   QVector<QProcess *> vProcess;
+  QVector<QMetaObject::Connection> mConn;
 
   bool testStarted;
   QProgressBar *mQProgressbar;
