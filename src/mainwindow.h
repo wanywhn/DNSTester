@@ -1,6 +1,8 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "networkutils.h"
+
 #include <QMainWindow>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
@@ -21,8 +23,6 @@ public:
   explicit MainWindow(QWidget *parent = 0);
   ~MainWindow();
 
-  void nmcliCall();
-
   void findNetworkInterface();
 
   void startPing(QString program, int index);
@@ -34,6 +34,8 @@ public:
   void init();
 
   void setSelectItemColor(QColor color);
+
+  void reserveSpace(int count);
 
 signals:
   void pingFinished();
@@ -47,7 +49,7 @@ private slots:
 
 private:
   void store(int index);
-  void cal();
+  void cal(int index);
 
 private:
   Ui::MainWindow *ui;
@@ -58,7 +60,7 @@ private:
 
   QStringList DnsList;
   QStringList DnsResult;
-  QQueue<double> DnsNumResult;
+  QVector<double> DnsNumResult;
 
   int timeouted;
   QString dnsSelected;
@@ -72,6 +74,8 @@ private:
   QNetworkAccessManager *netManager;
   QMetaObject::Connection conn;
 
+  NetworkUtils *utils;
+  static bool clickedSetDns;
 };
 
 #endif // MAINWINDOW_H

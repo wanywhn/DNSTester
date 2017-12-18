@@ -1,4 +1,5 @@
 #include "mainwindow.h"
+#include "networkutils.h"
 #include "ui_mainwindow.h"
 
 #include <QDebug>
@@ -12,19 +13,12 @@
 #include <QThread>
 #include <QTimer>
 
+bool MainWindow::clickedSetDns=false;
 void MainWindow::findNetworkInterface() {
-  QList<QNetworkInterface> list = QNetworkInterface::allInterfaces();
-  foreach (auto interface, list) {
-    qDebug() << interface.name();
-    QList<QNetworkAddressEntry> entryList = interface.addressEntries();
-    foreach (auto entry, entryList) {
-      if (entry.ip().toString() == "" || entry.ip().isLoopback() ||
-          entry.broadcast().toString() == "")
-        continue;
-      qDebug() << entry.ip().toString() << entry.netmask().toString()
-               << entry.broadcast().toString();
-      ui->comboBox_hw->addItem(interface.name() + ":" + entry.ip().toString());
-    }
+
+  auto names = utils->findNetworkInterface();
+  for (auto item : names) {
+    ui->comboBox_hw->addItem(item);
   }
 }
 
@@ -44,10 +38,17 @@ void MainWindow::addItemtoTableWidget() {
   }
 }
 
+void MainWindow::reserveSpace(int count) {
+  vProcess.resize(count);
+  DnsNumResult.resize(count);
+}
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
   this->setWindowTitle(tr("DNS优化器"));
+  utils = nullptr;
+  init();
   setWindowIcon(QIcon(":/icon/resource/icon/icons8-DNS-50.png"));
 
   ui->next_Intro_Btn->setText(tr("下一步"));
@@ -57,7 +58,6 @@ MainWindow::MainWindow(QWidget *parent)
   ui->update_DNS_List->setText(tr("更新DNS列表"));
   dnsSelected = "";
   dnsSelectedId = 0;
-  init();
   testStarted = false;
   ui->next_Intro_Btn->setGeometry(ui->set_Result_Btn->geometry());
   ui->label_DNS_exp->resize(900, 400);
@@ -94,17 +94,7 @@ MainWindow::MainWindow(QWidget *parent)
   connect(ui->start_Test_Btn, &QPushButton::clicked, this,
           &MainWindow::startTest);
   connect(ui->set_Result_Btn, &QPushButton::clicked, [this] {
-    if (dnsSelected == "") {
-      QMessageBox::warning(ui->centralWidget, tr("错误"), tr("请先进行测试"));
-      return;
-    }
-    int ret = QMessageBox::warning(
-        this, tr("警告"), tr("将重启网络以生效，确认？"),
-        QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
-    if (ret == QMessageBox::Yes)
-      setDns();
-    else
-      return;
+    setDns();
 
   });
   //每次尝试次数
@@ -115,7 +105,7 @@ MainWindow::MainWindow(QWidget *parent)
           << "223.6.6.6"
           << "112.124.47.27"; // TODO 获取数据
   DnsCount = DnsList.size();
-
+  reserveSpace(DnsCount);
   resultWidget = new QTableWidget(DnsCount, 2, this);
   resultWidget->setSelectionBehavior(QAbstractItemView::SelectRows);
   ui->horizontalLayout_dns_and_sec->addWidget(resultWidget);
@@ -141,7 +131,8 @@ MainWindow::~MainWindow() { delete ui; }
 
 void MainWindow::startPing(QString program, int index) {
   QProcess *mPing = new QProcess(this);
-  vProcess.push_back(mPing);
+  // vProcess.push_back(mPing);
+  vProcess.insert(index, mPing);
   program += DnsList[index];
   conn = connect(
       mPing,
@@ -149,24 +140,24 @@ void MainWindow::startPing(QString program, int index) {
           &QProcess::finished),
       [this, index]() { this->processFinished(index); });
   mConn.push_back(conn);
+  //  mConn[index]=conn;
   mPing->start(program);
   qDebug() << program;
 }
 
 void MainWindow::processFinished(int index) {
   this->store(index);
-  this->cal();
+  this->cal(index);
   auto item = this->resultWidget->item(index, 1);
   item->setText(QString::number(DnsNumResult[index]));
   emit pingFinished();
 }
 
-void MainWindow::setSelectItemColor(QColor color)
-{
-    auto dnsItem = this->resultWidget->item(dnsSelectedId, 0);
-    auto resultItem = this->resultWidget->item(dnsSelectedId, 1);
-    dnsItem->setTextColor(color);
-    resultItem->setTextColor(color);
+void MainWindow::setSelectItemColor(QColor color) {
+  auto dnsItem = this->resultWidget->item(dnsSelectedId, 0);
+  auto resultItem = this->resultWidget->item(dnsSelectedId, 1);
+  dnsItem->setTextColor(color);
+  resultItem->setTextColor(color);
 }
 
 void MainWindow::continueNext(QString program) {
@@ -205,44 +196,31 @@ void MainWindow::startTest() {
   conn = connect(this, &MainWindow::pingFinished,
                  [=]() { continueNext(program); });
   mConn.push_back(conn);
+  //  mConn[0]=conn;
   //坑，多连接了几次
   startPing(program, 0);
 }
 
-void MainWindow::nmcliCall() {
-  QString output = vProcess.back()->readAllStandardOutput();
-  QStringList splited = output.split(" ");
-  splited.removeDuplicates();
-  auto filted = splited.filter(QRegExp("^([a-z0-9]+-){4}[a-z0-9]+$"));
-  if (filted.size() == 0) {
-    QMessageBox::warning(ui->centralWidget, tr("错误"),
-                         tr("无法获取硬件UUID，请确认选择了正确的网络设备"));
+void MainWindow::setDns() {
+    if(true==testStarted){
+      QMessageBox::warning(ui->centralWidget, tr("错误"), tr("请先qingdai"));
+      return;
+    }
+  if (dnsSelected == "") {
+      QMessageBox::warning(ui->centralWidget, tr("错误"), tr("请先进行测试"));
+      return;
+    }
+  if (clickedSetDns) {
+    QMessageBox::information(
+        this, tr("qing chongxin ceshi"),
+        tr("ni yijing shezhi guole ,qing chongxin ceshi yibian"));
     return;
   }
-
-  //    ui->verticalLayout_sec->itemAt(dnsSelectedId)->widget()->setStyleSheet(QString(""));
-  QString UUID = filted.at(0);
-  QString cmd = "nmcli con mod " + UUID + " ipv4.dns " + dnsSelected +
-                " ipv4.ignore-auto-dns yes ";
-  QProcess *changeDns = new QProcess(ui->centralWidget);
-  changeDns->start(cmd);
-  QProcess *restartNetwork = new QProcess(ui->centralWidget);
-
-  cmd = "nmcli con up " + UUID;
-  conn = connect(
-      restartNetwork,
-      static_cast<void (QProcess::*)(int exitCode, QProcess::ExitStatus)>(
-          &QProcess::finished),
-      [this] {
-        QMessageBox::information(ui->centralWidget, tr("成功"),
-                                 tr("修改成功！"));
-      });
-  mConn.push_back(conn);
-
-  restartNetwork->start(cmd);
-}
-
-void MainWindow::setDns() {
+  int ret = QMessageBox::warning(
+      this, tr("警告"), tr("将重启网络以生效，确认？"),
+      QMessageBox::Yes | QMessageBox::No, QMessageBox::Yes);
+  if (ret != QMessageBox::Yes)
+    return;
   QString hw_interfaceName = ui->comboBox_hw->currentText().split(":").at(0);
   QProcess *mprocess = new QProcess(this);
   conn = connect(
@@ -253,20 +231,43 @@ void MainWindow::setDns() {
       mprocess,
       static_cast<void (QProcess::*)(int exitCode, QProcess::ExitStatus)>(
           &QProcess::finished),
-      [this] { nmcliCall(); });
+      [this] {
+        QString output = vProcess.back()->readAllStandardOutput();
+        QStringList splited = output.split(" ");
+        splited.removeDuplicates();
+        auto filted = splited.filter(QRegExp("^([a-z0-9]+-){4}[a-z0-9]+$"));
+        if (filted.size() == 0) {
+          QMessageBox::warning(
+              ui->centralWidget, tr("错误"),
+              tr("无法获取硬件UUID，请确认选择了正确的网络设备"));
+          return;
+        }
+        //    ui->verticalLayout_sec->itemAt(dnsSelectedId)->widget()->setStyleSheet(QString(""));
+        QString UUID = filted.at(0);
+
+        QHostAddress addr(dnsSelected);
+        connect(utils, &NetworkUtils::restartSuccessed, [this]() {
+          QMessageBox::information(this, tr("chenggong"),
+                                   tr("chongqi chenggong"));
+          clickedSetDns= true;
+        });
+        utils->ChangeDNSTo(addr, UUID);
+
+      });
   mConn.push_back(conn);
   QStringList options;
   options << "-c";
   options << "nmcli con show |grep " + hw_interfaceName;
   mprocess->start("/bin/bash", options);
   vProcess.push_back(mprocess);
+  // TODO kaolv shiyong guanlian rongqi
 }
 
 //读取数据放至Result中
 void MainWindow::store(int index) {
-  auto iter = vProcess.cbegin();
-  iter += index;
-  QByteArray res = (*iter)->readAllStandardOutput();
+  auto proc = vProcess.at(index);
+  //  iter += index;
+  QByteArray res = proc->readAllStandardOutput();
   QTextStream in(res);
   QString line;
   while (!in.atEnd()) {
@@ -290,22 +291,29 @@ void MainWindow::store(int index) {
 }
 
 //计算测试结果
-void MainWindow::cal() {
+void MainWindow::cal(int index) {
   double res = 0;
   for (int i = 0; i < PingTimes; ++i) {
     res += DnsResult.at(i).split(" ").at(0).toDouble();
   }
-  DnsNumResult.enqueue(res / PingTimes);
+  //  DnsNumResult.enqueue(res / PingTimes);
+  DnsNumResult.insert(index, res / PingTimes);
   DnsResult.clear();
 }
 
 void MainWindow::init() {
   DnsNumResult.clear();
   DnsResult.clear();
-  foreach (auto vp, vProcess) { delete vp; }
+  if (utils != nullptr)
+    delete utils;
+  utils = new NetworkUtils;
+  for (auto vp : vProcess) {
+    delete vp;
+  }
   vProcess.clear();
   timeouted = 1;
-
+  clickedSetDns=false;
+  dnsSelected="";
 }
 
 void MainWindow::on_update_DNS_List_clicked() {
@@ -328,6 +336,7 @@ void MainWindow::on_update_DNS_List_clicked() {
 
     DnsList.append(lines);
     DnsCount = DnsList.count();
+    this->reserveSpace(DnsCount);
     ui->progressBar->setValue(0);
     ui->progressBar->setMaximum(DnsCount * PingTimes);
     resultWidget->setRowCount(DnsCount);
