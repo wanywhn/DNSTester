@@ -40,7 +40,6 @@ void MainWindow::addItemtoTableWidget() {
 
 void MainWindow::reserveSpace(int count) {
   vProcess.resize(count);
-  DnsNumResult.resize(count);
 }
 
 MainWindow::MainWindow(QWidget *parent)
@@ -111,7 +110,7 @@ MainWindow::MainWindow(QWidget *parent)
   ui->horizontalLayout_dns_and_sec->addWidget(resultWidget);
   QStringList headers;
   headers << "服务器地址"
-          << "测试结果";
+          << "最优/平均/最差/方差";
   resultWidget->setHorizontalHeaderLabels(headers);
   resultWidget->horizontalHeader()->setSectionResizeMode(0,
                                                          QHeaderView::Stretch);
@@ -147,9 +146,9 @@ void MainWindow::startPing(QString program, int index) {
 
 void MainWindow::processFinished(int index) {
   this->store(index);
-  this->cal(index);
+//  this->cal(index);
   auto item = this->resultWidget->item(index, 1);
-  item->setText(QString::number(DnsNumResult[index]));
+  item->setText(DnsFinalResult[index]);
   emit pingFinished();
 }
 
@@ -167,13 +166,16 @@ void MainWindow::continueNext(QString program) {
   } else {
     ui->progressBar->setValue(DnsCount * PingTimes);
     auto item = this->resultWidget->item(DnsCount - 1, 1);
-    item->setText(QString::number(DnsNumResult[DnsCount - 1]));
+    item->setText(DnsFinalResult[DnsCount-1]);
     dnsSelectedId = 0;
-    double max = DnsNumResult.at(0);
+    for(auto i:DnsFinalResult){
+        DnsNumberResult.append(i.split('/').at(1).toDouble());
+    }
+    double max =DnsNumberResult.at(0);
     for (int i = 0; i != DnsCount; ++i) {
-      if (DnsNumResult.at(i) < max) {
+      if (DnsNumberResult.at(i) < max) {
         dnsSelectedId = i;
-        max = DnsNumResult.at(i);
+        max = DnsNumberResult.at(i);
       }
     }
     dnsSelected = DnsList.at(dnsSelectedId);
@@ -270,40 +272,19 @@ void MainWindow::store(int index) {
   QByteArray res = proc->readAllStandardOutput();
   QTextStream in(res);
   QString line;
-  while (!in.atEnd()) {
-    line = in.readLine(999);
-    QStringList split = line.split("=");
-    static int flag = 0;
-    if (split.size() == 4) {
-      if (++flag == PingTimes)
-        flag = 0;
-      qDebug() << split << flag;
-      DnsResult.append(split.at(3));
-    } else {
-      if (flag != 0) {
-        DnsResult.append("150 ms"); //丢包按150ms计算
-        ++flag;
-        flag = (flag % PingTimes);
-        qDebug() << flag;
-      }
-    }
-  }
+  QRegularExpression re(QStringLiteral("\\d*\\.\\d*/\\d*\\.\\d*/\\d*\\.\\d*/\\d*\\.\\d* "));
+  line=in.readAll();
+     auto matches=re.match(line);
+     if(!matches.hasMatch()){
+         DnsFinalResult.insert(index,"500/500/500/2");
+     }
+     auto result=matches.captured(0).trimmed();
+     DnsFinalResult.insert(index,result);
 }
 
-//计算测试结果
-void MainWindow::cal(int index) {
-  double res = 0;
-  for (int i = 0; i < PingTimes; ++i) {
-    res += DnsResult.at(i).split(" ").at(0).toDouble();
-  }
-  //  DnsNumResult.enqueue(res / PingTimes);
-  DnsNumResult.insert(index, res / PingTimes);
-  DnsResult.clear();
-}
 
 void MainWindow::init() {
-  DnsNumResult.clear();
-  DnsResult.clear();
+  DnsNumberResult.clear();
   if (utils != nullptr)
     delete utils;
   utils = new NetworkUtils;

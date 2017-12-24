@@ -41,7 +41,6 @@ signals:
   void pingFinished();
 private slots:
   void processFinished(int index);
-  //    void readyRead();
   void startTest();
   void setDns();
   void on_update_DNS_List_clicked();
@@ -49,7 +48,6 @@ private slots:
 
 private:
   void store(int index);
-  void cal(int index);
 
 private:
   Ui::MainWindow *ui;
@@ -59,8 +57,8 @@ private:
   int DnsCount;
 
   QStringList DnsList;
-  QStringList DnsResult;
-  QVector<double> DnsNumResult;
+  QVector<QString> DnsFinalResult;
+  QVector<double> DnsNumberResult;
 
   int timeouted;
   QString dnsSelected;
