@@ -26,11 +26,9 @@ void MainWindow::findNetworkInterface() {
 
 void MainWindow::addItemtoTableWidget() {
 
-  resultWidget->clearItems();
-  // NOTE clearItems has already free the memory
   listViewItems.clear();
   for (int i = 0; i != DnsCount; ++i) {
-    listViewItems.append(new MultiListItem(DnsList[i], tr("TODO")));
+    listViewItems.append(new MultiListItem(DnsList[i], tr("待测试")));
   }
   resultWidget->refreshItems(listViewItems);
 }
@@ -115,8 +113,8 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow() {
   delete ui;
-//  if (nullptr != resultWidget)
-//    delete resultWidget;
+  //  if (nullptr != resultWidget)
+  //    delete resultWidget;
 }
 
 void MainWindow::startPing(QString program, int index) {
@@ -139,11 +137,11 @@ void MainWindow::processFinished(int index) {
   emit pingFinished();
 }
 
-void MainWindow::setSelectItemColor(QColor color) {
+void MainWindow::setSelectItemColor(bool f, QColor color) {
   auto item = dynamic_cast<MultiListItem *>(listViewItems.at(dnsSelectedId));
   if (nullptr == item)
     return;
-  item->setTextColor(color);
+  item->setTextColor(f, color);
   resultWidget->repaint();
 }
 
@@ -167,7 +165,7 @@ void MainWindow::continueNext(QString program) {
       }
     }
     dnsSelected = DnsList.at(dnsSelectedId);
-    setSelectItemColor(Qt::red);
+    setSelectItemColor(true, Qt::red);
 
     foreach (conn, mConn) { disconnect(conn); }
     testStarted = false;
@@ -179,8 +177,9 @@ void MainWindow::startTest() {
     return;
   }
   initRes();
+  addItemtoTableWidget();
   testStarted = true;
-  //  setSelectItemColor(Qt::black);
+  setSelectItemColor(false, Qt::black);
   QString program = QString("ping -W 1 -c %L1 ").arg(PingTimes);
 
   ui->progressBar->setValue(1);
@@ -202,9 +201,8 @@ void MainWindow::setDns() {
     return;
   }
   if (clickedSetDns) {
-    QMessageBox::information(
-        this, tr("qing chongxin ceshi"),
-        tr("ni yijing shezhi guole ,qing chongxin ceshi yibian"));
+    QMessageBox::information(this, tr("请重新测试"),
+                             tr("您已经设置过了，请重新测试一遍。"));
     return;
   }
   int ret = QMessageBox::warning(
@@ -276,7 +274,7 @@ void MainWindow::updateListViewItems(int index, QString str) {
   if (nullptr == item)
     return;
   item->mresult = str;
-  //  resultWidget->refreshItems(listViewItems);
+  //    resultWidget->refreshItems(listViewItems);
   resultWidget->repaint();
   // TODO have a better method?
 }

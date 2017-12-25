@@ -39,16 +39,16 @@ void MultiListItem::drawForeground(QRect rect, QPainter *painter, int column,
   if (column == 1) {
     painter->drawText(QRect(rect.x() + padding, rect.y(),
                             rect.width() - padding * 2, rect.height()),
-                      Qt::AlignLeft | Qt::AlignVCenter, mDnsServer);
+                      Qt::AlignLeft| Qt::AlignVCenter, mDnsServer);
   } else if (column == 2) {
     painter->drawText(QRect(rect.x() + padding, rect.y(),
                             rect.width() - padding * 2, rect.height()),
-                      Qt::AlignRight | Qt::AlignVCenter, mresult);
+                      Qt::AlignLeft| Qt::AlignVCenter, mresult);
   }
 }
 
-void MultiListItem::setTextColor(QColor color)
+void MultiListItem::setTextColor(bool f, QColor color)
 {
-    needTextColor=true;
+    needTextColor=f;
     mcolor=color;
 }

@@ -16,7 +16,7 @@ public:
     bool sameAs(DSimpleListItem *item) override;
     void drawBackground(QRect rect, QPainter *painter, int index, bool isSelect) override;
     void drawForeground(QRect rect, QPainter *painter, int column, int index, bool isSelect) override;
-    void setTextColor(QColor color);
+    void setTextColor(bool f,QColor color);
 
     QString mDnsServer;
     QString mresult;

@@ -37,7 +37,7 @@ public:
 
   void initRes();
 
-  void setSelectItemColor(QColor color);
+  void setSelectItemColor(bool f,QColor color);
 
   void reserveSpace(int count);
 
