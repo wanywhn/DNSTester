@@ -12,11 +12,15 @@
 #include <QTableWidget>
 #include <QVector>
 
+#include <DMainWindow>
+#include <DSimpleListView>
+
 namespace Ui {
 class MainWindow;
 }
 
-class MainWindow : public QMainWindow {
+DWIDGET_USE_NAMESPACE
+class MainWindow : public DMainWindow {
   Q_OBJECT
 
 public:
@@ -31,11 +35,13 @@ public:
 
   void continueNext(QString program);
 
-  void init();
+  void initRes();
 
   void setSelectItemColor(QColor color);
 
   void reserveSpace(int count);
+
+  void initUI();
 
 signals:
   void pingFinished();
@@ -48,6 +54,7 @@ private slots:
 
 private:
   void store(int index);
+  void updateListViewItems(int index, QString str);
 
 private:
   Ui::MainWindow *ui;
@@ -63,10 +70,10 @@ private:
   int timeouted;
   QString dnsSelected;
   int dnsSelectedId;
-  QTableWidget *resultWidget;
+  DSimpleListView *resultWidget;
   QVector<QProcess *> vProcess;
   QVector<QMetaObject::Connection> mConn;
-
+  QList<DSimpleListItem *> listViewItems;
   bool testStarted;
   QProgressBar *mQProgressbar;
   QNetworkAccessManager *netManager;
