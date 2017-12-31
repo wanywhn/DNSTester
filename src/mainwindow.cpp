@@ -14,6 +14,7 @@
 #include <QTextStream>
 #include <QThread>
 #include <QTimer>
+#include <QtDBus/QDBusInterface>
 
 bool MainWindow::clickedSetDns = false;
 void MainWindow::findNetworkInterface() {
@@ -36,6 +37,7 @@ void MainWindow::addItemtoTableWidget() {
 void MainWindow::reserveSpace(int count) { vProcess.resize(count); }
 
 void MainWindow::initUI() {
+
   setWindowIcon(QIcon(":/icon/resource/icon/icons8-DNS-50.png"));
 
   ui->next_Intro_Btn->setText(tr("下一步"));
@@ -167,6 +169,7 @@ void MainWindow::continueNext(QString program) {
     dnsSelected = DnsList.at(dnsSelectedId);
     setSelectItemColor(true, Qt::red);
 
+    notifyActivator(tr("Complete"), tr("The test has completed"));
     foreach (conn, mConn) { disconnect(conn); }
     testStarted = false;
   }
@@ -262,11 +265,12 @@ void MainWindow::store(int index) {
       QStringLiteral("\\d*\\.\\d*/\\d*\\.\\d*/\\d*\\.\\d*/\\d*\\.\\d* "));
   line = in.readAll();
   auto matches = re.match(line);
-  if (!matches.hasMatch()) {
-    DnsFinalResult.insert(index, "500/500/500/2");
-  }
   auto result = matches.captured(0).trimmed();
-  DnsFinalResult.insert(index, result);
+  if (!matches.hasMatch() || result.isEmpty()) {
+    DnsFinalResult.insert(index, "000/999/999/0");
+  } else {
+    DnsFinalResult.insert(index, result);
+  }
 }
 
 void MainWindow::updateListViewItems(int index, QString str) {
@@ -277,6 +281,35 @@ void MainWindow::updateListViewItems(int index, QString str) {
   //    resultWidget->refreshItems(listViewItems);
   resultWidget->repaint();
   // TODO have a better method?
+}
+
+void MainWindow::notifyActivator(QString title, QString text) {
+  QStringList actions = QStringList() << "ShowWindow" << tr("Show Me");
+  QList<QVariant> argumentList;
+  argumentList << "DNSTester";
+  argumentList << static_cast<uint>(0);
+  argumentList << "DNSTester";
+  argumentList << title;
+  argumentList << tr(text.toStdString().data());
+  argumentList << actions;
+  argumentList << QVariantMap();
+  argumentList << static_cast<int>(3000);
+
+  static QDBusInterface notifyApp("org.freedesktop.Notifications",
+                                  "/org/freedesktop/Notifications",
+                                  "org.freedesktop.Notifications");
+  QDBusMessage reply =
+      notifyApp.callWithArgumentList(QDBus::AutoDetect, "Notify", argumentList);
+  if (QDBusMessage::ErrorMessage == reply.type()) {
+    qDebug() << "D-Bus Error:" << reply.errorMessage();
+  }
+
+  if (!QDBusConnection::sessionBus().isConnected()) {
+    qDebug() << "QDBusConnection::sessionBus().isConnected() failed";
+    return;
+  }
+  connect(&notifyApp, SIGNAL(ActionInvoked(uint, QString)), this,
+          SLOT(slotActionInvoked(uint, QString)));
 }
 
 void MainWindow::initRes() {
@@ -332,4 +365,15 @@ void MainWindow::on_update_DNS_List_clicked() {
 void MainWindow::replyFinished(QNetworkReply *reply) {
   qDebug() << "replyFinished";
   reply->deleteLater();
+}
+
+void MainWindow::slotActionInvoked(uint id, QString action) {
+
+  Q_UNUSED(id)
+  if ("ShowWindow" == action) {
+    this->showNormal();
+    this->raise();
+    this->activateWindow();
+  }
+  //    Q_EMIT show();
 }

@@ -51,10 +51,12 @@ private slots:
   void setDns();
   void on_update_DNS_List_clicked();
   void replyFinished(QNetworkReply *reply);
+  void slotActionInvoked(uint id,QString action);
 
 private:
   void store(int index);
   void updateListViewItems(int index, QString str);
+  void notifyActivator(QString title,QString text);
 
 private:
   Ui::MainWindow *ui;
