@@ -27,6 +27,7 @@ void MultiListItem::drawBackground(QRect rect, QPainter *painter, int index,
 
 void MultiListItem::drawForeground(QRect rect, QPainter *painter, int column,
                                    int index, bool isSelect) {
+    Q_UNUSED(index)
   int padding = 10;
   painter->setOpacity(1);
   if (isSelect) {

@@ -38,7 +38,7 @@ void MainWindow::reserveSpace(int count) { vProcess.resize(count); }
 
 void MainWindow::initUI() {
 
-  setWindowIcon(QIcon(":/icon/resource/icon/icons8-DNS-50.png"));
+  setWindowIcon(QIcon(":/icon/resource/icon/dns-tester.png"));
 
   ui->next_Intro_Btn->setText(tr("下一步"));
   ui->pre_Test_Btn->setText(tr("前一页"));

@@ -1,0 +1,17 @@
+[Desktop Entry]
+Categories=Application;System;Settings
+Comment=A DNS Server speed tester
+Comment[zh_CN]=DNS 测速器
+Comment[zh_TW]=DNS 測速器
+Encoding=UTF-8
+Exec=dns-tester
+Icon=dns-tester
+Name=DNSTester
+Name[zh_CN]=DNS测速器
+Name[zh_TW]=DNS 測速器
+Encoding=UTF-8
+StartupNotify=false
+Terminal=false
+Type=Application
+X-MultipleArgs=false
+

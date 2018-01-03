@@ -4,19 +4,17 @@
 #
 #-------------------------------------------------
 
-QT       += core gui network
+
+QT  += core gui network widgets
 QT  +=dbus
-CONFIG+=c++11
 
-greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
-
-TARGET = DNSTester
+TARGET = dns-tester
 TEMPLATE = app
 
-unix{
-    CONFIG+=link_pkgconfig
-    PKGCONFIG+=dtkwidget
-}
+CONFIG+=c++11
+CONFIG+=link_pkgconfig
+PKGCONFIG+=dtkwidget
+
 
 SOURCES += src/main.cpp\
         src/mainwindow.cpp \
@@ -34,4 +32,21 @@ FORMS    += \
 
 RESOURCES += \
     src/resource.qrc
-#LIBS+=-ldtkwidget
+
+DISTFILES += \
+    dns-tester.desktop
+
+isEmpty(PREFIX){
+    PREFIX=/usr
+}
+
+target.path=$$PREFIX/bin
+
+icon.path=$$PREFIX/share/pixmaps
+icon.files=$$PWD/src/resource/icon/dns-tester.png
+
+desktop.path=$$PREFIX/share/applications
+desktop.files= $$PWD/dns-tester.desktop
+
+
+INSTALLS += target icon desktop
