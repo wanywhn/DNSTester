@@ -32,6 +32,7 @@ void MainWindow::addItemtoTableWidget() {
     listViewItems.append(new MultiListItem(DnsList[i], tr("待测试")));
   }
   resultWidget->refreshItems(listViewItems);
+  //TODO Have a better method?
 }
 
 void MainWindow::reserveSpace(int count) { vProcess.resize(count); }
@@ -39,18 +40,6 @@ void MainWindow::reserveSpace(int count) { vProcess.resize(count); }
 void MainWindow::initUI() {
 
   setWindowIcon(QIcon(":/icon/resource/icon/dns-tester.png"));
-
-  ui->next_Intro_Btn->setText(tr("下一步"));
-  ui->pre_Test_Btn->setText(tr("前一页"));
-  ui->set_Result_Btn->setText(tr("进行设置"));
-  ui->start_Test_Btn->setText(tr("开始测试"));
-  ui->update_DNS_List->setText(tr("更新DNS列表"));
-  ui->next_Intro_Btn->setGeometry(ui->set_Result_Btn->geometry());
-  //  ui->label_DNS_exp->resize(900, 400);
-  ui->label_DNS_exp->setPixmap(QPixmap(":/image/resource/image/DNS_exp.jpg"));
-  //.scaled(ui->label_DNS_exp->size()));
-  ui->label_DNS_exp->setScaledContents(true);
-  ui->label_ip->setText(tr("请选择当前网卡"));
 
   ui->label_intro->setWordWrap(true);
   ui->label_intro->setText(
@@ -73,16 +62,28 @@ void MainWindow::initUI() {
 
   ui->stackedWidget->setCurrentIndex(0);
 
+  ui->next_Intro_Btn->setText(tr("下一步"));
+  ui->next_Intro_Btn->setGeometry(ui->set_Result_Btn->geometry());
+
+  ui->pre_Test_Btn->setText(tr("前一页"));
+  ui->set_Result_Btn->setText(tr("进行设置"));
+  ui->start_Test_Btn->setText(tr("开始测试"));
+  ui->update_DNS_List->setText(tr("更新DNS列表"));
+
+  ui->label_DNS_exp->setPixmap(QPixmap(":/image/resource/image/DNS_exp.jpg"));
+  ui->label_DNS_exp->setScaledContents(true);
+
+  ui->label_ip->setText(tr("请选择当前网卡"));
+
   connect(ui->next_Intro_Btn, &QPushButton::clicked,
           [this] { ui->stackedWidget->setCurrentWidget(ui->page_Test); });
+
   connect(ui->pre_Test_Btn, &QPushButton::clicked,
           [this] { ui->stackedWidget->setCurrentWidget(ui->page_Intro); });
+  connect(ui->set_Result_Btn, &QPushButton::clicked, [this] { setDns(); });
   connect(ui->start_Test_Btn, &QPushButton::clicked, this,
           &MainWindow::startTest);
-  connect(ui->set_Result_Btn, &QPushButton::clicked, [this] {
-    setDns();
 
-  });
   //每次尝试次数
   PingTimes = 3;
   DnsList << "114.114.114.114"
@@ -92,6 +93,7 @@ void MainWindow::initUI() {
           << "112.124.47.27"; // TODO 获取数据
   DnsCount = DnsList.size();
   reserveSpace(DnsCount);
+
   resultWidget = new MultiListView();
   ui->horizontalLayout_dns_and_sec->addWidget(resultWidget);
 
@@ -119,6 +121,11 @@ MainWindow::~MainWindow() {
   //    delete resultWidget;
 }
 
+/**
+ * @brief MainWindow::startPing 开始测试服务器质量
+ * @param program 测试语句，一般不变。还缺少服务器地址
+ * @param index 服务器地址位于DNSList的索引值
+ */
 void MainWindow::startPing(QString program, int index) {
   QProcess *mPing = new QProcess(this);
   vProcess.insert(index, mPing);
@@ -133,6 +140,10 @@ void MainWindow::startPing(QString program, int index) {
   qDebug() << program;
 }
 
+/**
+ * @brief MainWindow::processFinished 某一个服务器测试完成，进行数据更新
+ * @param index 刚刚完成测试的服务器的索引值
+ */
 void MainWindow::processFinished(int index) {
   this->store(index);
   updateListViewItems(index, DnsFinalResult[index]);
@@ -146,12 +157,8 @@ void MainWindow::setSelectItemColor(bool f, QColor color) {
   item->setTextColor(f, color);
   resultWidget->repaint();
 }
-
-void MainWindow::continueNext(QString program) {
-  if (++timeouted <= DnsCount) {
-    ui->progressBar->setValue((timeouted - 1) * PingTimes);
-    startPing(program, timeouted - 1);
-  } else {
+void MainWindow::allTestComplete()
+{
     ui->progressBar->setValue(DnsCount * PingTimes);
     updateListViewItems(DnsCount - 1, DnsFinalResult[DnsCount - 1]);
     dnsSelectedId = 0;
@@ -159,19 +166,33 @@ void MainWindow::continueNext(QString program) {
       DnsNumberResult.append(i.split('/').at(1).toDouble());
     }
 
-    double max = DnsNumberResult.at(0);
-    for (int i = 0; i != DnsCount; ++i) {
-      if (DnsNumberResult.at(i) < max) {
-        dnsSelectedId = i;
-        max = DnsNumberResult.at(i);
-      }
-    }
+   // double max = DnsNumberResult.at(0);
+   // for (int i = 0; i != DnsCount; ++i) {
+   //   if (DnsNumberResult.at(i) < max) {
+   //     dnsSelectedId = i;
+   //     max = DnsNumberResult.at(i);
+   //   }
+   // }
+    auto minIter=std::min_element(DnsNumberResult.cbegin(),DnsNumberResult.cend());
+    dnsSelectedId=std::distance(DnsNumberResult.cbegin(),minIter);
     dnsSelected = DnsList.at(dnsSelectedId);
     setSelectItemColor(true, Qt::red);
 
     notifyActivator(tr("Complete"), tr("The test has completed"));
     foreach (conn, mConn) { disconnect(conn); }
     testStarted = false;
+}
+
+/**
+ * @brief MainWindow::continueNext 前一个服务器已经测试完成，准备进行下一个（或者全部测试完成，做最终处理）
+ * @param program 测试语句，一般不变。还缺少服务器地址。
+ */
+void MainWindow::continueNext(QString program) {
+  if (++timeouted <= DnsCount) {
+    ui->progressBar->setValue((timeouted - 1) * PingTimes);
+    startPing(program, timeouted - 1);
+  } else {
+    allTestComplete();
   }
 }
 
@@ -238,11 +259,12 @@ void MainWindow::setDns() {
 
         QHostAddress addr(dnsSelected);
         connect(utils, &NetworkUtils::restartSuccessed, [this]() {
-          QMessageBox::information(this, tr("chenggong"),
-                                   tr("chongqi chenggong"));
+          QMessageBox::information(this, tr("成功"),
+                                   tr("重启成功"));
           clickedSetDns = true;
         });
         utils->ChangeDNSTo(addr, UUID);
+        //TODO 尝试DBUS方法？
 
       });
   mConn.push_back(conn);
@@ -251,10 +273,13 @@ void MainWindow::setDns() {
   options << "nmcli con show |grep " + hw_interfaceName;
   mprocess->start("/bin/bash", options);
   vProcess.push_back(mprocess);
-  // TODO kaolv shiyong guanlian rongqi
+  // TODO 考虑使用其他容器
 }
 
-//读取数据放至Result中
+/**
+ * @brief MainWindow::store 在Ping的输出结果中截取有用信息
+ * @param index
+ */
 void MainWindow::store(int index) {
   auto proc = vProcess.at(index);
   //  iter += index;
@@ -288,7 +313,7 @@ void MainWindow::notifyActivator(QString title, QString text) {
   QList<QVariant> argumentList;
   argumentList << "DNSTester";
   argumentList << static_cast<uint>(0);
-  argumentList << "DNSTester";
+  argumentList << "dns-tester";
   argumentList << title;
   argumentList << tr(text.toStdString().data());
   argumentList << actions;

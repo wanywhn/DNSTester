@@ -43,6 +43,8 @@ public:
 
   void initUI();
 
+  void allTestComplete();
+
 signals:
   void pingFinished();
 private slots:
