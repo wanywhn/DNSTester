@@ -10,6 +10,7 @@ QT  +=dbus
 
 TARGET = dns-tester
 TEMPLATE = app
+VERSION=1.3
 
 CONFIG+=c++11
 CONFIG+=link_pkgconfig

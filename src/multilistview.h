@@ -7,10 +7,10 @@
 #include "multlistitem.h"
 
 DWIDGET_USE_NAMESPACE
-class MultiListView : public DSimpleListView
-{
+class MultiListView : public DSimpleListView {
 public:
-    MultiListView(DSimpleListView *parent=0);
+  MultiListView(QWidget *parent = 0);
+  ~MultiListView();
 };
 
 #endif // MULTILISTVIEW_H

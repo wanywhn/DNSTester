@@ -1,19 +1,25 @@
 #include "multlistitem.h"
 
 MultiListItem::MultiListItem(QString DNSAddr, QString result)
-    : mDnsServer(DNSAddr), mresult(result) {needTextColor=false;}
+    : mDnsServer(DNSAddr), mresult(result) {
+  needTextColor = false;
+}
 
 bool MultiListItem::sameAs(DSimpleListItem *item) {
 
-    auto myitem=static_cast<MultiListItem *>(item);
-  if (nullptr ==myitem)
-    return false;
-  return (this->mresult == myitem->mresult)&&
-         (this->mDnsServer == myitem->mDnsServer);
+  // auto myitem = qobject_cast<MultiListItem *>(item);
+  // if (this == myitem) {
+  //   return true;
+  // }
+  // if (nullptr == myitem)
+  //   return false;
+  // return (this->mresult == myitem->mresult) &&
+  //        (this->mDnsServer == myitem->mDnsServer);
+  return this == item;
 }
-
 void MultiListItem::drawBackground(QRect rect, QPainter *painter, int index,
-                                   bool isSelect) {
+                                   bool isSelect, bool isHover) {
+
   QPainterPath path;
   path.addRect(QRectF(rect));
 
@@ -26,8 +32,8 @@ void MultiListItem::drawBackground(QRect rect, QPainter *painter, int index,
 }
 
 void MultiListItem::drawForeground(QRect rect, QPainter *painter, int column,
-                                   int index, bool isSelect) {
-    Q_UNUSED(index)
+                                   int index, bool isSelect, bool isHover) {
+  Q_UNUSED(index)
   int padding = 10;
   painter->setOpacity(1);
   if (isSelect) {
@@ -35,21 +41,20 @@ void MultiListItem::drawForeground(QRect rect, QPainter *painter, int column,
   } else {
     painter->setPen(QPen(QColor("#000000")));
   }
-  if(needTextColor)
-      painter->setPen(mcolor);
+  if (needTextColor)
+    painter->setPen(mcolor);
   if (column == 1) {
     painter->drawText(QRect(rect.x() + padding, rect.y(),
                             rect.width() - padding * 2, rect.height()),
-                      Qt::AlignLeft| Qt::AlignVCenter, mDnsServer);
+                      Qt::AlignLeft | Qt::AlignVCenter, mDnsServer);
   } else if (column == 2) {
     painter->drawText(QRect(rect.x() + padding, rect.y(),
                             rect.width() - padding * 2, rect.height()),
-                      Qt::AlignLeft| Qt::AlignVCenter, mresult);
+                      Qt::AlignLeft | Qt::AlignVCenter, mresult);
   }
 }
 
-void MultiListItem::setTextColor(bool f, QColor color)
-{
-    needTextColor=f;
-    mcolor=color;
+void MultiListItem::setTextColor(bool f, QColor color) {
+  needTextColor = f;
+  mcolor = color;
 }

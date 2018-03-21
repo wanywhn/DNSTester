@@ -27,12 +27,13 @@ void MainWindow::findNetworkInterface() {
 
 void MainWindow::addItemtoTableWidget() {
 
+  resultWidget->clearItems();
   listViewItems.clear();
   for (int i = 0; i != DnsCount; ++i) {
     listViewItems.append(new MultiListItem(DnsList[i], tr("待测试")));
   }
   resultWidget->refreshItems(listViewItems);
-  //TODO Have a better method?
+  // TODO Have a better method?
 }
 
 void MainWindow::reserveSpace(int count) { vProcess.resize(count); }
@@ -115,11 +116,7 @@ MainWindow::MainWindow(QWidget *parent)
   addItemtoTableWidget();
 }
 
-MainWindow::~MainWindow() {
-  delete ui;
-  //  if (nullptr != resultWidget)
-  //    delete resultWidget;
-}
+MainWindow::~MainWindow() { delete ui; }
 
 /**
  * @brief MainWindow::startPing 开始测试服务器质量
@@ -157,34 +154,28 @@ void MainWindow::setSelectItemColor(bool f, QColor color) {
   item->setTextColor(f, color);
   resultWidget->repaint();
 }
-void MainWindow::allTestComplete()
-{
-    ui->progressBar->setValue(DnsCount * PingTimes);
-    updateListViewItems(DnsCount - 1, DnsFinalResult[DnsCount - 1]);
-    dnsSelectedId = 0;
-    for (auto i : DnsFinalResult) {
-      DnsNumberResult.append(i.split('/').at(1).toDouble());
-    }
+void MainWindow::allTestComplete() {
+  ui->progressBar->setValue(DnsCount * PingTimes);
+  updateListViewItems(DnsCount - 1, DnsFinalResult[DnsCount - 1]);
+  dnsSelectedId = 0;
+  for (auto i : DnsFinalResult) {
+    DnsNumberResult.append(i.split('/').at(1).toDouble());
+  }
 
-   // double max = DnsNumberResult.at(0);
-   // for (int i = 0; i != DnsCount; ++i) {
-   //   if (DnsNumberResult.at(i) < max) {
-   //     dnsSelectedId = i;
-   //     max = DnsNumberResult.at(i);
-   //   }
-   // }
-    auto minIter=std::min_element(DnsNumberResult.cbegin(),DnsNumberResult.cend());
-    dnsSelectedId=std::distance(DnsNumberResult.cbegin(),minIter);
-    dnsSelected = DnsList.at(dnsSelectedId);
-    setSelectItemColor(true, Qt::red);
+  auto minIter =
+      std::min_element(DnsNumberResult.cbegin(), DnsNumberResult.cend());
+  dnsSelectedId = std::distance(DnsNumberResult.cbegin(), minIter);
+  dnsSelected = DnsList.at(dnsSelectedId);
+  setSelectItemColor(true, Qt::red);
 
-    notifyActivator(tr("Complete"), tr("The test has completed"));
-    foreach (conn, mConn) { disconnect(conn); }
-    testStarted = false;
+  notifyActivator(tr("Complete"), tr("The test has completed"));
+  foreach (conn, mConn) { disconnect(conn); }
+  testStarted = false;
 }
 
 /**
- * @brief MainWindow::continueNext 前一个服务器已经测试完成，准备进行下一个（或者全部测试完成，做最终处理）
+ * @brief MainWindow::continueNext
+ * 前一个服务器已经测试完成，准备进行下一个（或者全部测试完成，做最终处理）
  * @param program 测试语句，一般不变。还缺少服务器地址。
  */
 void MainWindow::continueNext(QString program) {
@@ -201,7 +192,6 @@ void MainWindow::startTest() {
     return;
   }
   initRes();
-  addItemtoTableWidget();
   testStarted = true;
   setSelectItemColor(false, Qt::black);
   QString program = QString("ping -W 1 -c %L1 ").arg(PingTimes);
@@ -259,12 +249,11 @@ void MainWindow::setDns() {
 
         QHostAddress addr(dnsSelected);
         connect(utils, &NetworkUtils::restartSuccessed, [this]() {
-          QMessageBox::information(this, tr("成功"),
-                                   tr("重启成功"));
+          QMessageBox::information(this, tr("成功"), tr("重启成功"));
           clickedSetDns = true;
         });
         utils->ChangeDNSTo(addr, UUID);
-        //TODO 尝试DBUS方法？
+        // TODO 尝试DBUS方法？
 
       });
   mConn.push_back(conn);
@@ -303,7 +292,6 @@ void MainWindow::updateListViewItems(int index, QString str) {
   if (nullptr == item)
     return;
   item->mresult = str;
-  //    resultWidget->refreshItems(listViewItems);
   resultWidget->repaint();
   // TODO have a better method?
 }
@@ -339,6 +327,7 @@ void MainWindow::notifyActivator(QString title, QString text) {
 
 void MainWindow::initRes() {
   DnsNumberResult.clear();
+  DnsFinalResult.clear();
   if (utils != nullptr)
     delete utils;
   utils = new NetworkUtils;
@@ -361,14 +350,20 @@ void MainWindow::on_update_DNS_List_clicked() {
   conn = connect(netManager, &QNetworkAccessManager::finished, this,
                  &MainWindow::replyFinished);
   mConn.push_back(conn);
-  auto reply = netManager->get(
-      QNetworkRequest(QUrl("http://wanywhn.com.cn:8080/DNSList")));
+  QNetworkRequest request(
+      QUrl("https://gitee.com/wanywhn/DNSTester/raw/master/DNSList"));
+  request.setHeader(QNetworkRequest::KnownHeaders::UserAgentHeader,
+                    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                    "(KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36");
+
+  auto reply = netManager->get(request);
   conn = connect(reply, &QNetworkReply::readyRead, [this, reply]() {
     QString line(reply->readAll());
     auto lines = line.split("\n");
     lines.removeDuplicates();
     lines.removeAll("");
     DnsList.clear();
+    DnsNumberResult.clear();
     initRes();
 
     DnsList.append(lines);

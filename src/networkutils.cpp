@@ -18,32 +18,30 @@ void NetworkUtils::ChangeDNSTo(QHostAddress &addr, QString &uuid) {
               &QProcess::finished),
           [this](int ecode, QProcess::ExitStatus stat) {
             if (stat == QProcess::NormalExit) {
-                qDebug()<<ecode;
+              qDebug() << ecode;
               emit restartSuccessed();
             }
           });
   restartNetwork->start(cmd);
 }
 
-QStringList NetworkUtils::findNetworkInterface()
-{
+QStringList NetworkUtils::findNetworkInterface() {
 
-      QList<QNetworkInterface> list = QNetworkInterface::allInterfaces();
-      QStringList res;
-      for(auto interface: list) {
-        qDebug() << interface.name();
-        QList<QNetworkAddressEntry> entryList = interface.addressEntries();
-        for(auto entry: entryList) {
-          if (entry.ip().toString() == "" || entry.ip().isLoopback() ||
-              entry.broadcast().toString() == "")
-          {
-              entryList.removeOne(entry);
-            continue;
-          }
-          qDebug() << entry.ip().toString() << entry.netmask().toString()
-                   << entry.broadcast().toString();
-          res<<interface.name()+":"+entry.ip().toString();
-        }
+  QList<QNetworkInterface> list = QNetworkInterface::allInterfaces();
+  QStringList res;
+  for (auto interface : list) {
+    qDebug() << interface.name();
+    QList<QNetworkAddressEntry> entryList = interface.addressEntries();
+    for (auto entry : entryList) {
+      if (entry.ip().toString() == "" || entry.ip().isLoopback() ||
+          entry.broadcast().toString() == "") {
+        entryList.removeOne(entry);
+        continue;
       }
-      return res;
+      qDebug() << entry.ip().toString() << entry.netmask().toString()
+               << entry.broadcast().toString();
+      res << interface.name() + ":" + entry.ip().toString();
+    }
+  }
+  return res;
 }
