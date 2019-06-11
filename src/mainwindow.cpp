@@ -16,6 +16,8 @@
 #include <QThread>
 #include <QTimer>
 #include <QtDBus/QDBusInterface>
+#include <QMenu>
+#include <QtWidgets/QInputDialog>
 
 bool MainWindow::clickedSetDns = false;
 
@@ -82,8 +84,8 @@ void MainWindow::initUI() {
 
     model = new DnsTableModel(this);
 
-    connect(model,&DnsTableModel::progressFinished,[this](int i){
-        this->ui->progressBar->setValue(i+1);
+    connect(model, &DnsTableModel::progressFinished, [this](int i) {
+        this->ui->progressBar->setValue(i + 1);
     });
     connect(model, &DnsTableModel::AllCompleted, [this]() {
         notifyActivator("Completed", "test completed");
@@ -113,6 +115,9 @@ void MainWindow::initUI() {
     resultWidget->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Fixed);
     resultWidget->horizontalHeader()->resizeSection(1, 300);
 
+    resultWidget->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(resultWidget,&QTableView::customContextMenuRequested,this,&MainWindow::menuRequest);
+
     ui->horizontalLayout_dns_and_sec->addWidget(resultWidget);
 
 }
@@ -121,7 +126,7 @@ MainWindow::MainWindow(QWidget *parent)
         : DMainWindow(parent), ui(new Ui::MainWindow) {
     ui->setupUi(this);
     this->setWindowTitle(tr("DNS优化器"));
-    utils =new NetworkUtils(this);
+    utils = new NetworkUtils(this);
     initUI();
 
     findNetworkInterface();
@@ -143,7 +148,7 @@ void MainWindow::setDns() {
         return;
     }
 //    auto idxs = resultWidget->selectionModel()->selectedIndexes();
-    auto idx=resultWidget->currentIndex();
+    auto idx = resultWidget->currentIndex();
     if (!idx.isValid()) {
         QMessageBox::warning(
                 this, tr("Warning"), tr("not select dns")
@@ -173,12 +178,12 @@ void MainWindow::setDns() {
                     return;
                 }
                 QString UUID = filted.at(0);
-                qDebug()<<"index row:"<<idx.row();
-                auto ip=model->index(idx.row(),0).data(Qt::DisplayRole).toString();
-                qDebug()<<"IP:"<<ip;
+                qDebug() << "index row:" << idx.row();
+                auto ip = model->index(idx.row(), 0).data(Qt::DisplayRole).toString();
+                qDebug() << "IP:" << ip;
 
                 QHostAddress addr(ip);
-                qDebug()<<"change to "<<addr.toString();
+                qDebug() << "change to " << addr.toString();
                 connect(utils, &NetworkUtils::restartSuccessed, [this]() {
                     QMessageBox::information(this, tr("成功"), tr("重启成功"));
                     clickedSetDns = true;
@@ -239,4 +244,38 @@ void MainWindow::slotActionInvoked(uint id, QString action) {
         this->activateWindow();
     }
     //    Q_EMIT show();
+}
+
+void MainWindow::menuRequest(QPoint pos) {
+    auto index=resultWidget->indexAt(pos);
+
+    auto *menu=new QMenu(this);
+    auto act=
+    new QAction(tr("新增一行"),this);
+    connect(act,&QAction::triggered,[this](){
+        auto dns=QInputDialog::getText(this,tr("input DNS"),tr("DNS"));
+        //TODO validator
+        if(dns.isEmpty()){
+            return;
+        }
+        this->model->insertRow(this->model->rowCount());
+        QMap<int,QVariant> roles;
+        roles.insert(Qt::DisplayRole,dns);
+        qDebug()<<"roles:"<<roles;
+        this->model->setItemData(model->index(model->rowCount()-1,0),roles);
+
+    });
+    menu->addAction(act);
+
+    if(index.isValid()){
+        act=new QAction(tr("删除该行"),this);
+        connect(act,&QAction::triggered,[this,index](){
+            this->model->removeRow(index.row());
+
+        });
+        menu->addAction(act);
+    }
+    menu->popup(resultWidget->viewport()->mapToGlobal(pos));
+
+
 }

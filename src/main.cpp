@@ -14,21 +14,26 @@ int main(int argc, char *argv[]) {
     qDebug() << "another instance is running";
     return 0;
   }
-  Dtk::Widget::DApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
-  Dtk::Widget::DApplication::setApplicationName("DNSTester");
-  Dtk::Widget::DApplication::setApplicationVersion(D_VERSION);
+  DApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+  DApplication::setOrganizationName("WANYWHN");
+  DApplication::setApplicationName("DNSTester");
+  DApplication::setApplicationVersion(D_VERSION);
   a.setTheme("light");
 
-  const char *descriptionText =
-      QT_TRANSLATE_NOOP("MainWindow", "DNSTester is...");
-  a.setApplicationDescription(
-      DApplication::translate("MainWindow", descriptionText) + "\n");
+//  const char *descriptionText =
+//      QT_TRANSLATE_NOOP("MainWindow", "DNSTester is...");
+//  a.setApplicationDescription(
+//      DApplication::translate("MainWindow", descriptionText) + "\n");
 
   const QString HomePage = "https://gitee.com/wanywhn/DNSTester";
   auto *about=new DAboutDialog();
   about->setWebsiteLink(HomePage);
   about->setWebsiteName(HomePage);
-  about->setCompanyLogo(QPixmap(":/icon/resource/icon/icons8-DNS-50.png"));
+  about->setProductName("DNS Tester");
+  about->setDescription(QObject::tr("DNS 测速与更换小工具"));
+  about->setAcknowledgementVisible(false);
+  about->setProductIcon(QIcon(":/icon/resource/icon/dns-tester.png"));
+  about->setCompanyLogo(QPixmap());
 
   a.setAboutDialog(about);
 

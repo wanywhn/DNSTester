@@ -5,6 +5,7 @@
 #include <QtNetwork/QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QtCore/QRegularExpression>
+#include <QtCore/QSettings>
 #include "DnsTableModel.h"
 
 int DnsTableModel::rowCount(const QModelIndex &parent) const {
@@ -44,11 +45,17 @@ QVariant DnsTableModel::data(const QModelIndex &index, int role) const {
 }
 
 DnsTableModel::DnsTableModel(QObject *parent) : QAbstractTableModel(parent) {
-    DnsList << "114.114.114.114"
-            << "114.114.115.115"
-            << "223.5.5.5"
-            << "223.6.6.6"
-            << "112.124.47.27";
+    QSettings settings;
+    auto sl = settings.value("DNS").toStringList();
+    if (sl.empty()) {
+        sl << "114.114.114.114"
+           << "114.114.115.115"
+           << "223.5.5.5"
+           << "223.6.6.6";
+        settings.setValue("DNS", sl);
+    }
+
+    DnsList = sl;
     reserveSpace(DnsList.size());
     netManager = new QNetworkAccessManager(this);
 }
@@ -74,6 +81,8 @@ void DnsTableModel::updateDNS() {
         initRes();
 
         DnsList.append(lines);
+        QSettings settings;
+        settings.setValue("DNS",DnsList);
         this->endResetModel();
         this->reserveSpace(DnsList.size());
 //        ui->progressBar->setValue(0);
@@ -108,6 +117,9 @@ void DnsTableModel::initRes() {
 }
 
 void DnsTableModel::startTest() {
+    auto rcnt = DnsFinalResult.size();
+    DnsFinalResult.clear();
+    dataChanged(index(0, 1), index(rcnt, 1));
 
     if (testStarted) {
         return;
@@ -192,6 +204,47 @@ void DnsTableModel::continueNext(QString program) {
                 foreach (conn, mConn) { disconnect(conn); }
         testStarted = false;
     }
+}
+
+bool DnsTableModel::insertRows(int row, int count, const QModelIndex &parent) {
+    beginResetModel();
+    for(auto i=0;i!=count;++i){
+        DnsList.insert(row,"");
+    }
+    endResetModel();
+//    dataChanged(index(row,0),index(rowCount(),1));
+    return true;
+
+//    return QAbstractItemModel::insertRows(row, count, parent);
+}
+
+bool DnsTableModel::setItemData(const QModelIndex &index, const QMap<int, QVariant> &roles) {
+    if(!index.isValid()||index.row()>=DnsList.size()){
+        return false;
+    }
+    for(auto item:roles.keys()){
+        if(item==Qt::DisplayRole&&index.column()==0){
+            DnsList[index.row()]=roles.value(item).toString();
+        }else{
+
+        }
+    }
+//    return QAbstractItemModel::setItemData(index, roles);
+QSettings sett;
+    sett.setValue("DNS",DnsList);
+return true;
+}
+
+bool DnsTableModel::removeRows(int row, int count, const QModelIndex &parent) {
+    beginResetModel();
+    for(auto i=0;i!=count;++i){
+        DnsList.removeAt(row+i);
+    }
+    endResetModel();
+    QSettings sett;
+    sett.setValue("DNS",DnsList);
+    return true;
+//    dataChanged(index(row,0),index(rowCount(),1));
 }
 
 

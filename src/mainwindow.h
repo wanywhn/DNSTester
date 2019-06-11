@@ -40,6 +40,7 @@ public:
 
 
 private slots:
+    void menuRequest(QPoint pos);
 
     void startTest();
 
