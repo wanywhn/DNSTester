@@ -56,15 +56,12 @@ private:
 private:
     Ui::MainWindow *ui;
     int IndexStackedWidget;
-    //注意更新
-    int DnsCount;
 
 
     QTableView *resultWidget;
     DnsTableModel *model;
 
     NetworkUtils *utils;
-    static bool clickedSetDns;
 };
 
 #endif // MAINWINDOW_H

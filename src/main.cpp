@@ -20,10 +20,6 @@ int main(int argc, char *argv[]) {
   DApplication::setApplicationVersion(D_VERSION);
   a.setTheme("light");
 
-//  const char *descriptionText =
-//      QT_TRANSLATE_NOOP("MainWindow", "DNSTester is...");
-//  a.setApplicationDescription(
-//      DApplication::translate("MainWindow", descriptionText) + "\n");
 
   const QString HomePage = "https://gitee.com/wanywhn/DNSTester";
   auto *about=new DAboutDialog();

@@ -85,8 +85,6 @@ void DnsTableModel::updateDNS() {
         settings.setValue("DNS",DnsList);
         this->endResetModel();
         this->reserveSpace(DnsList.size());
-//        ui->progressBar->setValue(0);
-//        ui->progressBar->setMaximum(DnsCount * PingTimes);
 //TODO clear tested result
 
         testStarted = false;
@@ -138,7 +136,7 @@ void DnsTableModel::startTest() {
 }
 
 /**
- * @brief MainWindow::startPing 开始测试服务器质量
+ * @brief DnsTable::startPing 开始测试服务器质量
  * @param program 测试语句，一般不变。还缺少服务器地址
  * @param index 服务器地址位于DNSList的索引值
  */
@@ -158,7 +156,7 @@ void DnsTableModel::startPing(QString program, int index) {
 }
 
 /**
- * @brief MainWindow::processFinished 某一个服务器测试完成，进行数据更新
+ * @brief DnsTable::processFinished 某一个服务器测试完成，进行数据更新
  * @param index 刚刚完成测试的服务器的索引值
  */
 void DnsTableModel::processFinished(int index) {
@@ -169,12 +167,11 @@ void DnsTableModel::processFinished(int index) {
 }
 
 /**
- * @brief MainWindow::store 在Ping的输出结果中截取有用信息
+ * @brief DnsTable::store 在Ping的输出结果中截取有用信息
  * @param index
  */
 void DnsTableModel::store(int index) {
     auto proc = vProcess.at(index);
-    //  iter += index;
     QByteArray res = proc->readAllStandardOutput();
     QTextStream in(res);
     QString line;
@@ -191,7 +188,7 @@ void DnsTableModel::store(int index) {
 }
 
 /**
- * @brief MainWindow::continueNext
+ * @brief DnsTable::continueNext
  * 前一个服务器已经测试完成，准备进行下一个（或者全部测试完成，做最终处理）
  * @param program 测试语句，一般不变。还缺少服务器地址。
  */
@@ -212,10 +209,8 @@ bool DnsTableModel::insertRows(int row, int count, const QModelIndex &parent) {
         DnsList.insert(row,"");
     }
     endResetModel();
-//    dataChanged(index(row,0),index(rowCount(),1));
     return true;
 
-//    return QAbstractItemModel::insertRows(row, count, parent);
 }
 
 bool DnsTableModel::setItemData(const QModelIndex &index, const QMap<int, QVariant> &roles) {
@@ -229,7 +224,6 @@ bool DnsTableModel::setItemData(const QModelIndex &index, const QMap<int, QVaria
 
         }
     }
-//    return QAbstractItemModel::setItemData(index, roles);
 QSettings sett;
     sett.setValue("DNS",DnsList);
 return true;
@@ -244,7 +238,6 @@ bool DnsTableModel::removeRows(int row, int count, const QModelIndex &parent) {
     QSettings sett;
     sett.setValue("DNS",DnsList);
     return true;
-//    dataChanged(index(row,0),index(rowCount(),1));
 }
 
 

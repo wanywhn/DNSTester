@@ -12,10 +12,6 @@ INSTALL(FILES src/resource/icon/dns-tester.png
 INSTALL(FILES dns-tester.desktop
 		DESTINATION share/applications
 		)
-INSTALL(TARGETS ${CMD_NAME}
-		RUNTIME
-		DESTINATION bin
-		)
 
 
 set(CPACK_PACKAGING_INSTALL_PREFIX "/usr")

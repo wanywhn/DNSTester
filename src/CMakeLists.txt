@@ -14,8 +14,6 @@ pkg_check_modules(Dtk REQUIRED IMPORTED_TARGET dtkwidget)
 pkg_check_modules(Dtk REQUIRED IMPORTED_TARGET dtkcore)
 
 set(SRC main.cpp mainwindow.cpp mainwindow.h
-        multilistview.cpp multilistview.h
-        multlistitem.cpp multlistitem.h
         networkutils.cpp networkutils.h
         DnsTableModel.cpp DnsTableModel.h)
 
@@ -32,3 +30,8 @@ target_link_libraries(${CMD_NAME} PUBLIC PkgConfig::Dtk)
 
 set_target_properties(${CMD_NAME} PROPERTIES AUTOMOC TRUE)
 set_target_properties(${CMD_NAME} PROPERTIES AUTORCC TRUE)
+
+INSTALL(TARGETS ${CMD_NAME}
+        RUNTIME
+        DESTINATION bin
+        )

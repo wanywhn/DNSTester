@@ -1,6 +1,4 @@
 #include "mainwindow.h"
-#include "multilistview.h"
-#include "multlistitem.h"
 #include "networkutils.h"
 #include "ui_mainwindow.h"
 
@@ -18,8 +16,6 @@
 #include <QtDBus/QDBusInterface>
 #include <QMenu>
 #include <QtWidgets/QInputDialog>
-
-bool MainWindow::clickedSetDns = false;
 
 void MainWindow::findNetworkInterface() {
 
@@ -138,6 +134,7 @@ MainWindow::~MainWindow() { delete ui; }
 void MainWindow::startTest() {
     model->startTest();
     ui->progressBar->setMinimum(0);
+    ui->progressBar->setValue(0);
     ui->progressBar->setMaximum(model->rowCount(QModelIndex()));
 
 }
@@ -186,7 +183,6 @@ void MainWindow::setDns() {
                 qDebug() << "change to " << addr.toString();
                 connect(utils, &NetworkUtils::restartSuccessed, [this]() {
                     QMessageBox::information(this, tr("成功"), tr("重启成功"));
-                    clickedSetDns = true;
                 });
                 utils->ChangeDNSTo(addr, UUID);
                 // TODO 尝试DBUS方法？
