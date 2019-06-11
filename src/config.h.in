@@ -1,0 +1,6 @@
+#ifndef DNSTESTER_CONFIG_H_IN_H
+#define DNSTESTER_CONFIG_H_IN_H
+
+#define D_VERSION "@PROJECT_VERSION@"
+
+#endif
