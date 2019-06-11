@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 
+#include "config.h"
 #include <DApplication>
 #include <DWidgetUtil>
 #include <DAboutDialog>
@@ -13,9 +14,9 @@ int main(int argc, char *argv[]) {
     qDebug() << "another instance is running";
     return 0;
   }
-  a.setAttribute(Qt::AA_EnableHighDpiScaling, true);
-  a.setApplicationName("DNSTester");
-  a.setApplicationVersion("1.2");
+  Dtk::Widget::DApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
+  Dtk::Widget::DApplication::setApplicationName("DNSTester");
+  Dtk::Widget::DApplication::setApplicationVersion(D_VERSION);
   a.setTheme("light");
 
   const char *descriptionText =
@@ -24,7 +25,7 @@ int main(int argc, char *argv[]) {
       DApplication::translate("MainWindow", descriptionText) + "\n");
 
   const QString HomePage = "https://gitee.com/wanywhn/DNSTester";
-  DAboutDialog *about=new DAboutDialog();
+  auto *about=new DAboutDialog();
   about->setWebsiteLink(HomePage);
   about->setWebsiteName(HomePage);
   about->setCompanyLogo(QPixmap(":/icon/resource/icon/icons8-DNS-50.png"));
@@ -38,5 +39,5 @@ int main(int argc, char *argv[]) {
   w.setMaximumSize(w.sizeHint());
 
   Dtk::Widget::moveToCenter(&w);
-  return a.exec();
+  return Dtk::Widget::DApplication::exec();
 }

@@ -17,7 +17,7 @@ set(SRC main.cpp mainwindow.cpp mainwindow.h
         multilistview.cpp multilistview.h
         multlistitem.cpp multlistitem.h
         networkutils.cpp networkutils.h
-        )
+        DnsTableModel.cpp DnsTableModel.h)
 
 qt5_wrap_ui(FORMS mainwindow.ui)
 
